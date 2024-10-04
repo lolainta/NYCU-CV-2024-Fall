@@ -28,7 +28,7 @@ def cv2_example(img_size, imgpoints, objpoints):
 def calibrate_camera(img_size, imgpoints, objpoints):
     n = len(imgpoints)
     assert n == len(objpoints)
-    # Compute homography matrix for each image
+    # Find out the homography matrix H for each images
     Hs = []
     for i in range(n):
         H = compute_homography(
@@ -37,14 +37,10 @@ def calibrate_camera(img_size, imgpoints, objpoints):
         )
         Hs.append(H)
 
+    # Find out the intrinsic matrix K
     K = compute_intrinsic_matrix(Hs)
-    K = np.array(
-        [
-            [3180.23295976, 0.0, 1639.78082629],
-            [0.0, 3200.46103117, 1428.06578153],
-            [0.0, 0.0, 1.0],
-        ]
-    )
+
+    # Find out the extrinsic matrix of each images
     extrinsics = []
     for H in Hs:
         extrinsics.append(compute_extrinsic_matrix(K, H))
