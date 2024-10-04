@@ -130,6 +130,8 @@ def plot_extrinsics(mtx, extrinsics):
     ax.set_ylabel("z")
     ax.set_zlabel("-y")
     ax.set_title("Extrinsic Parameters Visualization")
+
+    plt.show()
     # animation for rotating plot
 
     # for angle in range(0, 360):
