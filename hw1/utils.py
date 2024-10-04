@@ -45,10 +45,7 @@ def compute_intrinsic_matrix(Hs):
         ]
     )
 
-    eigvals, eigvecs = np.linalg.eigh(B)
-    if np.any(eigvals <= 0):
-        eigvals[eigvals <= 0] = np.finfo(float).eps
-        B = eigvecs @ np.diag(eigvals) @ eigvecs.T
+    B = B / B[2, 2]
 
     K = np.linalg.cholesky(B)
     K = np.linalg.inv(K).T
