@@ -36,6 +36,7 @@ def compute_intrinsic_matrix(Hs):
     A = np.array(A)
     U, S, V = np.linalg.svd(A)
     v = V[-1]
+
     B = np.array(
         [
             [v[0], v[1], v[3]],
@@ -43,6 +44,12 @@ def compute_intrinsic_matrix(Hs):
             [v[3], v[4], v[5]],
         ]
     )
+
+    eigvals, eigvecs = np.linalg.eigh(B)
+    if np.any(eigvals <= 0):
+        eigvals[eigvals <= 0] = np.finfo(float).eps
+        B = eigvecs @ np.diag(eigvals) @ eigvecs.T
+
     K = np.linalg.cholesky(B)
     K = np.linalg.inv(K).T
     return K / K[2, 2]

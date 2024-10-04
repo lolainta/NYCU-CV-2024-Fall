@@ -8,7 +8,7 @@ from utils import compute_extrinsic_matrix, compute_homography, compute_intrinsi
 
 np.set_printoptions(suppress=True, linewidth=200, threshold=10)
 ic.configureOutput(includeContext=True)
-ic.disable()
+# ic.disable()
 
 
 def cv2_example(img_size, imgpoints, objpoints):
@@ -114,7 +114,6 @@ def plot_extrinsics(mtx, extrinsics):
     Y_max = max_values[1]
     Z_min = min_values[2]
     Z_max = max_values[2]
-    ic(X_min, X_max, Y_min, Y_max, Z_min, Z_max)
 
     max_range = np.array([X_max - X_min, Y_max - Y_min, Z_max - Z_min]).max() / 2.0
 
@@ -131,7 +130,7 @@ def plot_extrinsics(mtx, extrinsics):
     ax.set_zlabel("-y")
     ax.set_title("Extrinsic Parameters Visualization")
 
-    plt.show()
+    plt.savefig("extrinsics.png")
     # animation for rotating plot
 
     # for angle in range(0, 360):
