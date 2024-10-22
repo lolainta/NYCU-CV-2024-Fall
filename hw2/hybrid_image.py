@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 from utils import get_image_pairs
+from tqdm import trange, tqdm
 
 
 def normalize(img):
@@ -35,6 +36,8 @@ def hybrid_channel(
 
     def low_pass_filter(dl: float, gaussian=True) -> np.ndarray:
         if gaussian:
+            if dl == 0:
+                return np.zeros((rows, cols))
             X, Y = np.meshgrid(np.arange(cols), np.arange(rows))
             return np.exp(-distance(X, Y) / (2 * dl**2))
         else:
@@ -47,6 +50,8 @@ def hybrid_channel(
 
     def high_pass_filter(dh: float, gaussian=True) -> np.ndarray:
         if gaussian:
+            if dh == 0:
+                return np.ones((rows, cols))
             X, Y = np.meshgrid(np.arange(cols), np.arange(rows))
             return 1 - np.exp(-distance(X, Y) / (2 * dh**2))
         else:
@@ -98,6 +103,8 @@ def hybrid_image(
 
 def main():
     folder_path = "data/task1and2_hybrid_pyramid/"
+    os.makedirs("./results/hybrid", exist_ok=True)
+
     images = get_image_pairs(folder_path)
 
     cutoffs: dict[int, tuple[bool, tuple[int, int]]] = {
@@ -123,15 +130,55 @@ def main():
         )
         merged = np.hstack((img1, img2, final))
 
-        # Show the hybrid image
-        cv2.imshow("Hybrid Image", merged)
-        cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-
         # Save the hybrid image
-        os.makedirs("./results/hybrid", exist_ok=True)
         cv2.imwrite(f"./results/hybrid/{num}.png", final)
+        # cv2.imshow("Hybrid Image", merged)
+        # cv2.waitKey(0)
+
+
+def expirements():
+    folder_path = "data/task1and2_hybrid_pyramid/"
+    os.makedirs("./results/hybrid", exist_ok=True)
+
+    images = get_image_pairs(folder_path)
+
+    for num, (img1, img2) in images:
+        results = []
+        for gaussian in [True, False]:
+            row = []
+            for cut_off in trange(0, 50, 5):
+                final = hybrid_image(
+                    img1,
+                    img2,
+                    cutoff=(cut_off, cut_off),
+                    gaussian=gaussian,
+                )
+                cv2.putText(
+                    final,
+                    f"{"Gaussian" if gaussian else "Simple"}",
+                    (25, 25),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+                cv2.putText(
+                    final,
+                    f"Cut-off: {cut_off}",
+                    (25, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
+                row.append(final)
+            results.append(np.hstack(row))
+        merged = np.vstack(results)
+        cv2.imwrite(f"./results/hybrid/{num}-all.png", merged)
 
 
 if __name__ == "__main__":
     main()
+    # expirements()

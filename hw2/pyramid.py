@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from tqdm import tqdm
-
 from utils import get_images
 
 
@@ -53,13 +52,17 @@ def fft_pyramid(layers):
 # Function to display pyramids
 def save_pyramid(pyramid, fft_amplitude, fname: str):
     plt.cla()
+    m, n = pyramid[0].shape
+    ratio = m / n
+    print(fname, m, n, ratio)
     fig, axs = plt.subplots(
         2,
         len(pyramid),
-        figsize=(4 * len(pyramid), 10),
+        figsize=(2 * len(pyramid), 5 * ratio),
+        constrained_layout=True,
     )
     # disable padding between subplots
-    plt.subplots_adjust(hspace=0)
+    # fig.frameon = False
 
     # Show each level of the pyramid
     for i, layer in enumerate(pyramid):
@@ -71,12 +74,10 @@ def save_pyramid(pyramid, fft_amplitude, fname: str):
     for i, layer in enumerate(fft_amplitude):
         axs[1, i].imshow(layer)
         layer_height, layer_width = layer.shape
-        axs[1, i].set_title(f"FFT Amplitude {i}")
         axs[1, i].text(
             0.5,
             -0.2,
             f"{layer_width}x{layer_height}",
-            size=20,
             ha="center",
             transform=axs[1, i].transAxes,
         )
@@ -88,16 +89,18 @@ def save_pyramid(pyramid, fft_amplitude, fname: str):
 def process_image(img_name, img, level=5):
     gaussian_pyr = gaussian_pyramid(img, level)
     fft_amplitude = fft_pyramid(gaussian_pyr)
-    save_pyramid(gaussian_pyr, fft_amplitude, f"results/pyramid/{img_name}.png")
+    save_pyramid(gaussian_pyr, fft_amplitude, f"results/pyramid/{img_name[:-4]}.png")
 
 
 def main():
     folder_path = "data/task1and2_hybrid_pyramid"
-    images = get_images(folder_path)
     os.makedirs("results/pyramid", exist_ok=True)
+
+    images = get_images(folder_path)
     for img_name, img in tqdm(images):
         process_image(img_name, img)
 
 
 if __name__ == "__main__":
     main()
+    # expirements()

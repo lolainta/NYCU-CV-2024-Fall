@@ -80,9 +80,10 @@ def align_img(b, g, r, X_OFFSET, Y_OFFSET):
 
 
 def main():
-    # folder_path = "data/task3_colorizing"
-    folder_path = "data/task3_cmu"
-    os.makedirs("./results/color", exist_ok=True)
+    data = "colorizing"
+    # data = "cmu"
+    folder_path = f"data/task3_{data}"
+    os.makedirs(f"./results/color/{data}", exist_ok=True)
     print("Starting the colorization process")
     for fname, bo, go, ro in get_prokudin_gorsky_images(folder_path):
         print("--------------------")
@@ -130,19 +131,42 @@ def main():
         im_out_uint8 = np.clip(im_out, 0, 255).astype(np.uint8)
 
         # Save the results
-        print(f"Saving the results to results/color/{fname[:-4]}-out.png")
+        print(f"Saving the results to results/color/{data}/{fname[:-4]}-out.png")
 
-        with open(f"./results/color/{fname[:-4]}-out.txt", "w") as f:
+        with open(f"./results/color/{data}/{fname[:-4]}-out.txt", "w") as f:
             f.write(f"Blue-Green Offset: {bo_shift[1]} {bo_shift[0]}\n")
             f.write(f"Red-Green Offset: {ro_shift[1]} {ro_shift[0]}\n")
 
         cv2.imwrite(
-            f"./results/color/{fname[:-4]}-out.png",
+            f"./results/color/{data}/{fname[:-4]}-out.png",
             im_out_uint8,
         )
         # cv2.imshow("image", im_out_uint8)
         # cv2.waitKey(0)
 
 
+def experiment():
+    data = "cmu"
+    folder_path = f"data/task3_{data}"
+    for fname, bo, go, ro in get_prokudin_gorsky_images(folder_path):
+        out_path = f"./results/color/{data}/{fname[:-4]}-out.txt"
+        with open(out_path, "r") as f:
+            our_result = f.readlines()
+        with open(os.path.join(folder_path, "out", f"{fname[:-4]}-out.txt"), "r") as f:
+            gt = f.readlines()
+
+        print(f"- `{fname}`")
+        print(f"    ```")
+        print(f"    Our Result:")
+        for line in our_result:
+            print(f"    {line.strip()}")
+        print(f"    Ground Truth:")
+        for line in gt:
+            print(f"    {line.strip()}")
+        print(f"    ```")
+        print(f"    ![{fname[:-4]}](./results/color/{data}/{fname[:-4]}-out.png)")
+
+
 if __name__ == "__main__":
     main()
+    # experiment()
