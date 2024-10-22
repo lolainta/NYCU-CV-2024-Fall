@@ -1,0 +1,2 @@
+Blue-Green Offset: -55 -9
+Red-Green Offset: 62 4
