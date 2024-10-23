@@ -54,7 +54,6 @@ def save_pyramid(pyramid, fft_amplitude, fname: str):
     plt.cla()
     m, n = pyramid[0].shape
     ratio = m / n
-    print(fname, m, n, ratio)
     fig, axs = plt.subplots(
         2,
         len(pyramid),
@@ -89,7 +88,7 @@ def save_pyramid(pyramid, fft_amplitude, fname: str):
 def process_image(img_name, img, level=5):
     gaussian_pyr = gaussian_pyramid(img, level)
     fft_amplitude = fft_pyramid(gaussian_pyr)
-    save_pyramid(gaussian_pyr, fft_amplitude, f"results/pyramid/{img_name[:-4]}.png")
+    return gaussian_pyr, fft_amplitude
 
 
 def main():
@@ -98,7 +97,25 @@ def main():
 
     images = get_images(folder_path)
     for img_name, img in tqdm(images):
-        process_image(img_name, img)
+        gpyr, fpyr = process_image(img_name, img)
+        save_pyramid(gpyr, fpyr, f"results/pyramid/{img_name[:-4]}.png")
+
+
+def expirements():
+    import cv2
+
+    os.makedirs("results/pyramid", exist_ok=True)
+    gpyrs = []
+    fpyrs = []
+    imgs = sorted(os.listdir(os.path.join("results", "pyramid")))
+    print(imgs)
+    for i in range(0, len(imgs), 2):
+        left = imgs[i]
+        right = imgs[i + 1]
+        l_img = cv2.imread(os.path.join("results", "pyramid", left), cv2.IMREAD_COLOR)
+        r_img = cv2.imread(os.path.join("results", "pyramid", right), cv2.IMREAD_COLOR)
+        merged = np.hstack((l_img, r_img))
+        cv2.imwrite(f"results/pyramid/{i // 2}.png", merged)
 
 
 if __name__ == "__main__":

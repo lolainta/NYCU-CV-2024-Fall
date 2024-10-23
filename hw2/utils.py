@@ -84,3 +84,71 @@ def get_prokudin_gorsky_images(
             b, g, r = split_image(os.path.join(folder_path, file))
             images.append((file, b, g, r))
     return images
+
+
+def add_gt_label(gt, gt_offset):
+    cv2.putText(
+        gt,
+        f"Ground Truth",
+        (20, 25),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        gt,
+        f"Blue-Green Offset: {gt_offset[0][0]} {gt_offset[0][1]}",
+        (20, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        gt,
+        f"Red-Green Offset: {gt_offset[1][0]} {gt_offset[1][1]}",
+        (20, 75),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    return gt
+
+
+def add_results_label(result, bo_shift, ro_shift, NCC):
+    cv2.putText(
+        result,
+        f"NCC: {NCC:.4f}",
+        (20, 25),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        result,
+        f"Blue-Green Offset: {bo_shift[1]} {bo_shift[0]}",
+        (20, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        result,
+        f"Red-Green Offset: {ro_shift[1]} {ro_shift[0]}",
+        (20, 75),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (0, 0, 0),
+        1,
+        cv2.LINE_AA,
+    )
+    return result
