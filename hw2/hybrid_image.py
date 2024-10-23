@@ -5,7 +5,7 @@ from utils import get_image_pairs, add_cutoff_label
 from tqdm import trange, tqdm
 
 FOLDER_PATH = "./data/task1and2_hybrid_pyramid/"
-# FOLDER_PATH = "./my_data/hybrid/"
+FOLDER_PATH = "./my_data/task1and2_hybrid_pyramid/"
 
 
 def normalize(img):

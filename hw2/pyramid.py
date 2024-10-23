@@ -2,7 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from tqdm import tqdm
-from utils import get_images
+from utils import get_images, get_image_pairs
+
+# FOLDER_PATH = "./data/task1and2_hybrid_pyramid/"
+FOLDER_PATH = "./my_data/task1and2_hybrid_pyramid/"
 
 
 def getGaussianKernel(kernel_size, sigma):
@@ -92,11 +95,10 @@ def process_image(img_name, img, level=5):
 
 
 def main():
-    folder_path = "data/task1and2_hybrid_pyramid"
     os.makedirs("./output/pyramid", exist_ok=True)
-
-    images = get_images(folder_path)
+    images = get_images(FOLDER_PATH)
     for img_name, img in tqdm(images):
+        tqdm.write(f"Processing {img_name}")
         gpyr, fpyr = process_image(img_name, img)
         save_pyramid(gpyr, fpyr, f"./output/pyramid/{img_name[:-4]}.png")
 
@@ -105,19 +107,15 @@ def expirements():
     import cv2
 
     os.makedirs("./output/pyramid", exist_ok=True)
-    gpyrs = []
-    fpyrs = []
-    imgs = sorted(os.listdir(os.path.join("results", "pyramid")))
-    print(imgs)
-    for i in range(0, len(imgs), 2):
-        left = imgs[i]
-        right = imgs[i + 1]
-        l_img = cv2.imread(os.path.join("results", "pyramid", left), cv2.IMREAD_COLOR)
-        r_img = cv2.imread(os.path.join("results", "pyramid", right), cv2.IMREAD_COLOR)
+    imgs = get_image_pairs("./output/pyramid")
+    for num, (l_img, r_img) in imgs:
+        if l_img.shape != r_img.shape:
+            print(f"Resizing {r_img.shape} to match {l_img.shape}")
+            r_img = cv2.resize(r_img, (l_img.shape[1], l_img.shape[0]))
         merged = np.hstack((l_img, r_img))
-        cv2.imwrite(f"./output/pyramid/{i // 2}.png", merged)
+        cv2.imwrite(f"./output/pyramid/result_{num}.png", merged)
 
 
 if __name__ == "__main__":
     main()
-    # expirements()
+    expirements()
