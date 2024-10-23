@@ -1,8 +1,11 @@
 import cv2
 import numpy as np
 import os
-from utils import get_image_pairs
+from utils import get_image_pairs, add_cutoff_label
 from tqdm import trange, tqdm
+
+FOLDER_PATH = "./data/task1and2_hybrid_pyramid/"
+# FOLDER_PATH = "./my_data/hybrid/"
 
 
 def normalize(img):
@@ -44,7 +47,8 @@ def hybrid_channel(
             ret = np.zeros((rows, cols))
             for i in range(rows):
                 for j in range(cols):
-                    if distance(i, j) <= dl**2:
+                    # if distance(i, j) <= dl**2:
+                    if distance(i, j) <= dl:
                         ret[i, j] = 1
             return ret
 
@@ -58,7 +62,8 @@ def hybrid_channel(
             ret = np.ones((rows, cols))
             for i in range(rows):
                 for j in range(cols):
-                    if distance(i, j) <= dh**2:
+                    # if distance(i, j) <= dh**2:
+                    if distance(i, j) <= dh:
                         ret[i, j] = 0
             return ret
 
@@ -102,19 +107,18 @@ def hybrid_image(
 
 
 def main():
-    folder_path = "data/task1and2_hybrid_pyramid/"
-    os.makedirs("./results/hybrid", exist_ok=True)
-
-    images = get_image_pairs(folder_path)
-
+    images = get_image_pairs(FOLDER_PATH)
+    os.makedirs("./output/hybrid", exist_ok=True)
     cutoffs: dict[int, tuple[bool, tuple[int, int]]] = {
         0: (False, (15, 15)),
         1: (True, (40, 40)),
-        2: (False, (5, 5)),
-        3: (False, (10, 10)),
-        4: (True, (25, 25)),
-        5: (False, (10, 10)),
+        2: (False, (15, 15)),
+        3: (True, (30, 30)),
+        4: (True, (15, 15)),
+        5: (True, (23, 23)),
         6: (True, (55, 55)),
+        7: (True, (15, 15)),
+        8: (True, (15, 15)),
     }
 
     for num, (img1, img2) in images:
@@ -131,52 +135,31 @@ def main():
         merged = np.hstack((img1, img2, final))
 
         # Save the hybrid image
-        cv2.imwrite(f"./results/hybrid/{num}.png", final)
+        cv2.imwrite(f"./output/hybrid/{num}.png", final)
         # cv2.imshow("Hybrid Image", merged)
         # cv2.waitKey(0)
 
 
 def expirements():
-    folder_path = "data/task1and2_hybrid_pyramid/"
-    os.makedirs("./results/hybrid", exist_ok=True)
-
-    images = get_image_pairs(folder_path)
-
+    os.makedirs("./output/hybrid", exist_ok=True)
+    images = get_image_pairs(FOLDER_PATH)
     for num, (img1, img2) in images:
         results = []
-        for gaussian in [True, False]:
+        for gaussian in tqdm([True, False]):
             row = []
-            for cut_off in trange(0, 50, 5):
+            for cut_off_o in trange(2, 10):
+                cut_off = cut_off_o**3 // 4
                 final = hybrid_image(
                     img1,
                     img2,
                     cutoff=(cut_off, cut_off),
                     gaussian=gaussian,
                 )
-                cv2.putText(
-                    final,
-                    f"{"Gaussian" if gaussian else "Simple"}",
-                    (25, 25),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
-                cv2.putText(
-                    final,
-                    f"Cut-off: {cut_off}",
-                    (25, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+                final = add_cutoff_label(final, gaussian, cut_off)
                 row.append(final)
             results.append(np.hstack(row))
         merged = np.vstack(results)
-        cv2.imwrite(f"./results/hybrid/{num}-all.png", merged)
+        cv2.imwrite(f"./output/hybrid/{num}-all.png", merged)
 
 
 if __name__ == "__main__":

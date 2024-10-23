@@ -93,18 +93,18 @@ def process_image(img_name, img, level=5):
 
 def main():
     folder_path = "data/task1and2_hybrid_pyramid"
-    os.makedirs("results/pyramid", exist_ok=True)
+    os.makedirs("./output/pyramid", exist_ok=True)
 
     images = get_images(folder_path)
     for img_name, img in tqdm(images):
         gpyr, fpyr = process_image(img_name, img)
-        save_pyramid(gpyr, fpyr, f"results/pyramid/{img_name[:-4]}.png")
+        save_pyramid(gpyr, fpyr, f"./output/pyramid/{img_name[:-4]}.png")
 
 
 def expirements():
     import cv2
 
-    os.makedirs("results/pyramid", exist_ok=True)
+    os.makedirs("./output/pyramid", exist_ok=True)
     gpyrs = []
     fpyrs = []
     imgs = sorted(os.listdir(os.path.join("results", "pyramid")))
@@ -115,7 +115,7 @@ def expirements():
         l_img = cv2.imread(os.path.join("results", "pyramid", left), cv2.IMREAD_COLOR)
         r_img = cv2.imread(os.path.join("results", "pyramid", right), cv2.IMREAD_COLOR)
         merged = np.hstack((l_img, r_img))
-        cv2.imwrite(f"results/pyramid/{i // 2}.png", merged)
+        cv2.imwrite(f"./output/pyramid/{i // 2}.png", merged)
 
 
 if __name__ == "__main__":

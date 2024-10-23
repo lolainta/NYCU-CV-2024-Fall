@@ -152,3 +152,27 @@ def add_results_label(result, bo_shift, ro_shift, NCC):
         cv2.LINE_AA,
     )
     return result
+
+
+def add_cutoff_label(img, gaussian, cutoff):
+    cv2.putText(
+        img,
+        f"{"Gaussian" if gaussian else "Simple"}",
+        (25, 25),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        img,
+        f"Cut-off: {cutoff}",
+        (25, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (255, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+    return img

@@ -138,7 +138,7 @@ def main():
     # data = "colorizing"
     data = "cmu"
     folder_path = f"data/task3_{data}"
-    os.makedirs(f"./results/color/{data}", exist_ok=True)
+    os.makedirs(f"./output/color/{data}", exist_ok=True)
     print("Starting the colorization process")
     errors = []
 
@@ -148,14 +148,14 @@ def main():
         result, b_shift, r_shift = align_image(fname, bo, go, ro)
 
         # Save the results
-        print(f"Saving the results to results/color/{data}/{fname[:-4]}-out.png")
+        print(f"Saving the results to ./output/color/{data}/{fname[:-4]}-out.png")
 
-        with open(f"./results/color/{data}/{fname[:-4]}-out.txt", "w") as f:
+        with open(f"./output/color/{data}/{fname[:-4]}-out.txt", "w") as f:
             f.write(f"Blue-Green Offset: {b_shift[1]} {b_shift[0]}\n")
             f.write(f"Red-Green Offset: {r_shift[1]} {r_shift[0]}\n")
 
         cv2.imwrite(
-            f"./results/color/{data}/{fname[:-4]}-out.png",
+            f"./output/color/{data}/{fname[:-4]}-out.png",
             result,
         )
 
@@ -183,7 +183,7 @@ def main():
             result = add_results_label(result, b_shift, r_shift, -NCC(result, gt))
 
             merged = np.hstack((gt, result))
-            cv2.imwrite(f"./results/color/{data}/{fname[:-4]}-out-merged.png", merged)
+            cv2.imwrite(f"./output/color/{data}/{fname[:-4]}-out-merged.png", merged)
             error = error_analysis(b_shift, r_shift, gt_offset, gt.shape[:2])
             print(f"Error: {error}")
             errors.append(error)
@@ -201,7 +201,7 @@ def experiment():
     data = "cmu"
     folder_path = f"data/task3_{data}"
     for fname, bo, go, ro in get_prokudin_gorsky_images(folder_path):
-        out_path = f"./results/color/{data}/{fname[:-4]}-out.txt"
+        out_path = f"./output/color/{data}/{fname[:-4]}-out.txt"
         with open(out_path, "r") as f:
             our_result = f.readlines()
         b_shift = tuple(map(int, our_result[0].split(" ")[-2:]))
@@ -225,9 +225,7 @@ def experiment():
         print(f"      BG Error: {error[0]*100:.2f}%")
         print(f"      RG Error: {error[1]*100:.2f}%")
         print(f"    ```")
-        print(
-            f"    ![{fname[:-4]}](./results/color/{data}/{fname[:-4]}-out-merged.png)"
-        )
+        print(f"    ![{fname[:-4]}](./output/color/{data}/{fname[:-4]}-out-merged.png)")
 
 
 if __name__ == "__main__":
