@@ -5,6 +5,16 @@ from tqdm import trange
 from utils import get_prokudin_gorsky_images
 from utils import add_gt_label, add_results_label
 
+DATA = "colorizing"
+DATA = "cmu"
+DATA = "my_data"
+
+
+if DATA == "colorizing" or DATA == "cmu":
+    folder_path = f"data/task3_{DATA}"
+elif DATA == "my_data":
+    folder_path = f"my_data/task3"
+
 
 def shift_image(img, off_x, off_y):
     img = np.roll(img, (off_x, off_y), (1, 0))
@@ -135,10 +145,7 @@ def error_analysis(b_shift, r_shift, gt_offset, gt_shape):
 
 
 def main():
-    # data = "colorizing"
-    data = "cmu"
-    folder_path = f"data/task3_{data}"
-    os.makedirs(f"./output/color/{data}", exist_ok=True)
+    os.makedirs(f"./output/color/{DATA}", exist_ok=True)
     print("Starting the colorization process")
     errors = []
 
@@ -148,18 +155,18 @@ def main():
         result, b_shift, r_shift = align_image(fname, bo, go, ro)
 
         # Save the results
-        print(f"Saving the results to ./output/color/{data}/{fname[:-4]}-out.png")
+        print(f"Saving the results to ./output/color/{DATA}/{fname[:-4]}-out.png")
 
-        with open(f"./output/color/{data}/{fname[:-4]}-out.txt", "w") as f:
+        with open(f"./output/color/{DATA}/{fname[:-4]}-out.txt", "w") as f:
             f.write(f"Blue-Green Offset: {b_shift[1]} {b_shift[0]}\n")
             f.write(f"Red-Green Offset: {r_shift[1]} {r_shift[0]}\n")
 
         cv2.imwrite(
-            f"./output/color/{data}/{fname[:-4]}-out.png",
+            f"./output/color/{DATA}/{fname[:-4]}-out.png",
             result,
         )
 
-        if data == "cmu":
+        if DATA == "cmu":
             # CMU dataset has ground truth images
             with open(
                 os.path.join(folder_path, "out", f"{fname[:-4]}-out.jpg"), "r"
@@ -183,7 +190,7 @@ def main():
             result = add_results_label(result, b_shift, r_shift, -NCC(result, gt))
 
             merged = np.hstack((gt, result))
-            cv2.imwrite(f"./output/color/{data}/{fname[:-4]}-out-merged.png", merged)
+            cv2.imwrite(f"./output/color/{DATA}/{fname[:-4]}-out-merged.png", merged)
             error = error_analysis(b_shift, r_shift, gt_offset, gt.shape[:2])
             print(f"Error: {error}")
             errors.append(error)
@@ -191,17 +198,15 @@ def main():
         # cv2.imshow("image", im_out_uint8)
         # cv2.waitKey(0)
     print("--------------------")
-    if data == "cmu":
+    if DATA == "cmu":
         print("Error Analysis:")
         print(f"Mean Error: {np.mean(errors, axis=0)*100}")
         print(f"Variance: {np.var(errors, axis=0)}")
 
 
 def experiment():
-    data = "cmu"
-    folder_path = f"data/task3_{data}"
     for fname, bo, go, ro in get_prokudin_gorsky_images(folder_path):
-        out_path = f"./output/color/{data}/{fname[:-4]}-out.txt"
+        out_path = f"./output/color/{DATA}/{fname[:-4]}-out.txt"
         with open(out_path, "r") as f:
             our_result = f.readlines()
         b_shift = tuple(map(int, our_result[0].split(" ")[-2:]))
@@ -225,7 +230,7 @@ def experiment():
         print(f"      BG Error: {error[0]*100:.2f}%")
         print(f"      RG Error: {error[1]*100:.2f}%")
         print(f"    ```")
-        print(f"    ![{fname[:-4]}](./output/color/{data}/{fname[:-4]}-out-merged.png)")
+        print(f"    ![{fname[:-4]}](./output/color/{DATA}/{fname[:-4]}-out-merged.png)")
 
 
 if __name__ == "__main__":
