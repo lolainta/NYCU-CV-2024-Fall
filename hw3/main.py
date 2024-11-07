@@ -1,83 +1,80 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from tqdm import trange
 import cv2
 import os
 import random
 
+# FOLDER_PATH = "my_data/"
+# FOLDER_PATH = "my_data/4k"
+FOLDER_PATH = "data"
+SEED = 114514
 
-def stitch(img_pair, ratio=0.75):
+random.seed(SEED)
+np.random.seed(SEED)
+
+
+def stitch(img_pair, fname1, fname2, ratio=0.75):
     img_l, img_r = img_pair
-    (hl, wl) = img_l.shape[:2]
-    (hr, wr) = img_r.shape[:2]
-
     print("Step 1 - SIFT keypoint detection and descriptor computation...")
-    sift = cv2.SIFT_create()
+    sift = cv2.SIFT_create()  # type: ignore
     keypoints_l, descriptors_l = sift.detectAndCompute(img_l, None)
     keypoints_r, descriptors_r = sift.detectAndCompute(img_r, None)
+    print("Number of keypoints in the left image:", len(keypoints_l))
+    print("Number of keypoints in the right image:", len(keypoints_r))
+
+    cv2.imwrite(
+        f"output/keypoints/{fname1}", cv2.drawKeypoints(img_l, keypoints_l, None)  # type: ignore
+    )
+    cv2.imwrite(
+        f"output/keypoints/{fname2}", cv2.drawKeypoints(img_r, keypoints_r, None)  # type: ignore
+    )
 
     print("Step 2 - Keypoint matching with Lowe's ratio test...")
-    matches_pos = matchKeyPoints(
+    matches_pos = match_keypoints(
         keypoints_l, keypoints_r, descriptors_l, descriptors_r, ratio
     )
     print("Number of matching points:", len(matches_pos))
-
     print("Step 3 - RANSAC algorithm to find the best homography...")
-    HomoMat = ransacHomography(matches_pos)
-
+    homography = ransac(matches_pos)
     print("Step 4 - Create panoramic image...")
-    warp_img = warp([img_l, img_r], HomoMat)
+    warp_img = warp([img_l, img_r], homography)
 
     return warp_img
 
 
-def matchKeyPoints(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ratio):
+def match_keypoints(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ratio):
     pair_points = []
-    for i in range(len(descriptors_l)):
-        distances = [np.linalg.norm(descriptors_l[i] - d) for d in descriptors_r]
-        sorted_indices = np.argsort(distances)
-        min_d, second_min_d = distances[sorted_indices[0]], distances[sorted_indices[1]]
-
-        if min_d < ratio * second_min_d:
-            pair_points.append(
-                [
-                    (int(keypoints_l[i].pt[0]), int(keypoints_l[i].pt[1])),
-                    (
-                        int(keypoints_r[sorted_indices[0]].pt[0]),
-                        int(keypoints_r[sorted_indices[0]].pt[1]),
-                    ),
-                ]
-            )
-
+    for i in trange(len(keypoints_l)):
+        dists = np.linalg.norm(descriptors_r - descriptors_l[i], axis=1)
+        parted_idx = np.argpartition(dists, 2)[:2]
+        if dists[parted_idx[0]] < ratio * dists[parted_idx[1]]:
+            pair_points.append([keypoints_l[i].pt, keypoints_r[parted_idx[0]].pt])
     return pair_points
 
 
-def findHomographyMatrix(src, dst):
+def compute_homography(pts_src, pts_dst):
     A = []
-    for i in range(len(src)):
-        x, y = src[i][0], src[i][1]
-        x_prime, y_prime = dst[i][0], dst[i][1]
-        A.extend(
-            [
-                [-x, -y, -1, 0, 0, 0, x * x_prime, y * x_prime, x_prime],
-                [0, 0, 0, -x, -y, -1, x * y_prime, y * y_prime, y_prime],
-            ]
-        )
-
-    _, _, vt = np.linalg.svd(A)
-    H = vt[-1].reshape(3, 3)
+    for i in range(len(pts_src)):
+        x, y = pts_src[i]
+        u, v = pts_dst[i]
+        A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
+        A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
+    A = np.array(A)
+    assert A.shape == (len(pts_src) * 2, 9)
+    U, S, V = np.linalg.svd(A)
+    H = V[-1].reshape(3, 3)
     return H / H[2, 2]
 
 
-def ransacHomography(matches_pos, threshold=5.0, max_iterations=8000):
+def ransac(matches_pos, threshold=5.0, max_iterations=1000):
     max_inliers = 0
     best_H = None
-
-    for _ in range(max_iterations):
-        sample_indices = random.sample(range(len(matches_pos)), 4)
+    for _ in trange(max_iterations):
+        sample_indices = random.sample(range(len(matches_pos)), 8)
         src_sample = np.array([matches_pos[i][1] for i in sample_indices])
         dst_sample = np.array([matches_pos[i][0] for i in sample_indices])
 
-        H = findHomographyMatrix(src_sample, dst_sample)
+        H = compute_homography(src_sample, dst_sample)
         inlier_count = 0
 
         for match in matches_pos:
@@ -85,10 +82,8 @@ def ransacHomography(matches_pos, threshold=5.0, max_iterations=8000):
             projected_point = H @ src_point
             projected_point /= projected_point[2]
             dst_point = np.array([*match[0]])
-
             if np.linalg.norm(projected_point[:2] - dst_point) < threshold:
                 inlier_count += 1
-
         if inlier_count > max_inliers:
             max_inliers = inlier_count
             best_H = H
@@ -97,18 +92,17 @@ def ransacHomography(matches_pos, threshold=5.0, max_iterations=8000):
     return best_H
 
 
-def warp(imgs, HomoMat):
-
-    img_left, img_right = imgs
-    hl, wl = img_left.shape[:2]
-    hr, wr = img_right.shape[:2]
+def warp(imgs, H):
+    img_l, img_r = imgs
+    hl, wl = img_l.shape[:2]
+    hr, wr = img_r.shape[:2]
     stitch_img = np.zeros((max(hl, hr), wl + wr, 3), dtype="int")
 
     # Compute the inverse of the homography matrix for coordinate mapping
-    inv_H = np.linalg.inv(HomoMat)
+    inv_H = np.linalg.inv(H)
 
     # Map pixels from the right image to the stitched image using the inverse homography
-    for i in range(stitch_img.shape[0]):
+    for i in trange(stitch_img.shape[0]):
         for j in range(stitch_img.shape[1]):
             coor = np.array([j, i, 1])
             img_right_coor = inv_H @ coor
@@ -120,15 +114,14 @@ def warp(imgs, HomoMat):
 
             # Skip pixels outside the boundaries of the right image
             if 0 <= x < hr and 0 <= y < wr:
-                stitch_img[i, j] = img_right[x, y]
+                stitch_img[i, j] = img_r[x, y]
 
     # Blend the left and transformed right image
-    stitch_img = linear_blending([img_left, stitch_img])
-    return remove_black_border(stitch_img)
+    merged = linear_blending([img_l, stitch_img])
+    return remove_black_border(merged)
 
 
 def linear_blending(imgs):
-
     img_left, img_right = imgs
     hl, wl = img_left.shape[:2]
     hr, wr = img_right.shape[:2]
@@ -153,7 +146,6 @@ def linear_blending(imgs):
 
     blended_img = img_right_resized.copy()
     blended_img[:hl, :wl] = img_left.copy()
-
     for i in range(max(hl, hr)):
         for j in range(wl + wr):
             if overlap_mask[i, j]:
@@ -161,45 +153,51 @@ def linear_blending(imgs):
                     alpha_mask[i, j] * img_left[i, j]
                     + (1 - alpha_mask[i, j]) * img_right_resized[i, j]
                 )
-
     return blended_img
 
 
 def remove_black_border(img):
-
     non_black_cols = np.where(img.max(axis=0) > 0)[0]
     non_black_rows = np.where(img.max(axis=1) > 0)[0]
-
     if non_black_cols.size and non_black_rows.size:
         return img[
             non_black_rows[0] : non_black_rows[-1] + 1,
             non_black_cols[0] : non_black_cols[-1] + 1,
         ]
-
     return img
 
 
-if __name__ == "__main__":
-    data_folder = "data/"
-    file_names = os.listdir(data_folder)
-    fileNameList = [
-        (file_names[i], file_names[i + 1]) for i in range(0, len(file_names), 2)
+def main():
+    os.makedirs("output/merged", exist_ok=True)
+    os.makedirs("output/keypoints", exist_ok=True)
+    files = [
+        f
+        for f in sorted(os.listdir(FOLDER_PATH))
+        if os.path.isfile(os.path.join(FOLDER_PATH, f))
     ]
+    print("Files to process:", files)
+    file_pairs = [(files[i], files[i + 1]) for i in range(0, len(files), 2)]
 
-    for fname1, fname2 in fileNameList:
-        img_left = cv2.imread(os.path.join(data_folder, fname1))
-        img_right = cv2.imread(os.path.join(data_folder, fname2))
+    for fname1, fname2 in file_pairs:
+        print("=" * 50)
+        print(f"Processing {fname1} and {fname2}...")
+        output_fname = f"{''.join(fname1.split('.')[:-1])}_{''.join(fname2.split('.')[:-1])}_merge.jpg"
 
-        warp_img = stitch([img_left, img_right])
+        img_left = cv2.imread(os.path.join(FOLDER_PATH, fname1))
+        img_right = cv2.imread(os.path.join(FOLDER_PATH, fname2))
 
-        plt.figure()
-        plt.title("Stitched Image")
+        warp_img = stitch([img_left, img_right], fname1, fname2)
 
         # Ensure the image is in uint8 format for proper display
         if warp_img.dtype != np.uint8:
             warp_img = np.clip(warp_img, 0, 255).astype(np.uint8)
 
-        plt.imshow(cv2.cvtColor(warp_img, cv2.COLOR_BGR2RGB))
+        merge_img = np.hstack([img_left, img_right, warp_img])
+        cv2.imwrite(os.path.join("output", output_fname), warp_img)
 
-        save_path = os.path.join("result", fname1)
-        cv2.imwrite(save_path, warp_img)
+        cv2.imwrite(os.path.join("output/merged", output_fname), merge_img)
+        print(f"Saved to output/{output_fname}")
+
+
+if __name__ == "__main__":
+    main()
