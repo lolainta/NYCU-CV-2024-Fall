@@ -3,7 +3,7 @@ import numpy as np
 import os
 import random
 
-from tqdm import trange
+from tqdm import trange, tqdm
 from icecream import ic
 
 from config import OUTPUT_PATH

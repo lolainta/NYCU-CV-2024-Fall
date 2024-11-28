@@ -110,13 +110,12 @@ def plot_3d_points(points_3d):
         points_3d[:, 0],
         points_3d[:, 1],
         points_3d[:, 2],
-        s=20,
     )
     ax.set_title("3D Points")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
+    ax.set_zlabel("Z")  # type: ignore
     # set camera position
-    ax.view_init(elev=-95, azim=-90)
+    ax.view_init(elev=-95, azim=-90)  # type: ignore
     # plt.show()
     plt.savefig(os.path.join(OUTPUT_PATH, "mesh.jpg"))

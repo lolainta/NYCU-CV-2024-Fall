@@ -4,7 +4,7 @@ import os
 from icecream import ic
 
 from config import IMG_PATH, K, OUTPUT_PATH, Point
-from utils import feature_matching, ransac, match_keypoints
+from utils import feature_matching, ransac
 from draw import draw_epipolar_lines, visulize_3d_points
 
 
@@ -79,6 +79,7 @@ def save_points_as_obj(points_3d, filename):
 
 
 def main():
+    print(f"Running images: {IMG_PATH}")
     img1 = cv2.imread(IMG_PATH[0], cv2.IMREAD_COLOR)
     img2 = cv2.imread(IMG_PATH[1], cv2.IMREAD_COLOR)
 
@@ -89,13 +90,12 @@ def main():
     ic(len(matches))
     assert len(matches[0]) == 2
 
-    # F = ransac(matches).T
+    # F = ransac(matches)
     F, mask = cv2.findFundamentalMat(
         np.array([m[0] for m in matches]),
         np.array([m[1] for m in matches]),
         cv2.FM_RANSAC,
     )
-    F = F.T
 
     ic(F)
 
