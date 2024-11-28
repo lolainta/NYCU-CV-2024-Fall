@@ -1,1 +1,4 @@
+.vscode/
 *.py[cod]
+my_data/
+*.zip
