@@ -7,6 +7,10 @@ from config import IMG_PATH, K, OUTPUT_PATH, Point
 from utils import feature_matching, ransac
 from draw import draw_epipolar_lines, visulize_3d_points
 
+THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING = 42
+
+np.random.seed(THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING)
+
 
 def decompose_essential_matrix(E):
     """
