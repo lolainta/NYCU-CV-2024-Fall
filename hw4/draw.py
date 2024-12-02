@@ -1,10 +1,8 @@
 import cv2
 import os
 
-from random import randint
+from random import randint, seed
 from matplotlib import pyplot as plt
-
-from config import OUTPUT_PATH
 
 
 def random_color():
@@ -74,7 +72,7 @@ def draw_epipolar_lines(img1, img2, points1, points2, F):
     return img1_line, img1_point, img2_line, img2_point
 
 
-def visulize_3d_points(points_3d, img1, img2, P1, P2):
+def visulize_3d_points(points_3d, img1, img2, P1, P2, output_path=None):
     """
     Visualize 3D points in two views given projection matrices and corresponding points.
 
@@ -98,11 +96,11 @@ def visulize_3d_points(points_3d, img1, img2, P1, P2):
         cv2.circle(img1_points, tuple(map(int, point1)), 5, (0, 255, 0), -1)
         cv2.circle(img2_points, tuple(map(int, point2)), 5, (0, 255, 0), -1)
 
-    plot_3d_points(points_3d)
+    plot_3d_points(points_3d, output_path)
     return img1_points, img2_points
 
 
-def plot_3d_points(points_3d):
+def plot_3d_points(points_3d, output_path=None):
     # Plot 3D points
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -118,4 +116,5 @@ def plot_3d_points(points_3d):
     # set camera position
     ax.view_init(elev=-95, azim=-90)  # type: ignore
     # plt.show()
-    plt.savefig(os.path.join(OUTPUT_PATH, "mesh.jpg"))
+    if output_path is not None:
+        plt.savefig(os.path.join(output_path, "mesh.jpg"))

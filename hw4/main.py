@@ -1,14 +1,19 @@
 import cv2
 import numpy as np
 import os
+import trimesh
+import random
 from icecream import ic
 
-from config import IMG_PATH, K, OUTPUT_PATH, Point
+from config import load
 from utils import feature_matching, ransac
 from draw import draw_epipolar_lines, visulize_3d_points
 
 THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING = 42
 
+Point = tuple[int, int]
+
+random.seed(THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING)
 np.random.seed(THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING)
 
 
@@ -71,24 +76,18 @@ def triangulate_3d_points(K, p1, p2, pts1, pts2):
     return np.array(points_3d)
 
 
-def save_points_as_obj(points_3d, filename):
-    """
-    Save 3D points to an OBJ file.
-    """
-    with open(filename, "w") as file:
-        for point in points_3d:
-            file.write(f"v {point[0]} {point[1]} {point[2]}\n")
-
-
-def main():
+def main(case: int):
+    IMG_PATH, K, OUTPUT_PATH = load(case)
     print(f"Running images: {IMG_PATH}")
+    print(f"Output path: {OUTPUT_PATH}")
+
     img1 = cv2.imread(IMG_PATH[0], cv2.IMREAD_COLOR)
     img2 = cv2.imread(IMG_PATH[1], cv2.IMREAD_COLOR)
 
     m1 = np.hstack((img1, img2))
     cv2.imwrite(os.path.join(OUTPUT_PATH, "original_image.jpg"), m1)
 
-    matches: list[list[Point]] = feature_matching(img1, img2, 0.75)
+    matches: list[list[Point]] = feature_matching(img1, img2, 0.75, OUTPUT_PATH)
     ic(len(matches))
     assert len(matches[0]) == 2
 
@@ -136,8 +135,10 @@ def main():
     ic(len(point3d), point3d)
 
     # Save the triangulated points
-    save_points_as_obj(point3d, os.path.join(OUTPUT_PATH, "output_model.obj"))
-    img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2)
+    mesh = trimesh.Trimesh(vertices=point3d)
+    mesh.export(os.path.join(OUTPUT_PATH, "output_model.obj"))
+
+    img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2, OUTPUT_PATH)
     cv2.imwrite(
         os.path.join(OUTPUT_PATH, "3d_points.jpg"), np.hstack((img1_pts, img2_pts))
     )
@@ -145,4 +146,5 @@ def main():
 
 if __name__ == "__main__":
     os.makedirs("output", exist_ok=True)
-    main()
+    main(1)
+    main(2)

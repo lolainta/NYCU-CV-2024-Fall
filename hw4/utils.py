@@ -3,10 +3,8 @@ import numpy as np
 import os
 import random
 
-from tqdm import trange, tqdm
+from tqdm import trange
 from icecream import ic
-
-from config import OUTPUT_PATH
 
 
 def match_keypoints(keypoints_l, keypoints_r, descriptors_l, descriptors_r, ratio):
@@ -19,7 +17,7 @@ def match_keypoints(keypoints_l, keypoints_r, descriptors_l, descriptors_r, rati
     return pair_points
 
 
-def feature_matching(img1, img2, ratio=0.75):
+def feature_matching(img1, img2, ratio=0.75, output_path="output"):
     sift = cv2.SIFT_create()  # type: ignore
     kp1, des1 = sift.detectAndCompute(img1, None)
     kp2, des2 = sift.detectAndCompute(img2, None)
@@ -27,8 +25,9 @@ def feature_matching(img1, img2, ratio=0.75):
 
     feat1 = cv2.drawKeypoints(img1, kp1, img1)
     feat2 = cv2.drawKeypoints(img2, kp2, img2)
+
     cv2.imwrite(
-        os.path.join(OUTPUT_PATH, "feature_matching.jpg"),
+        os.path.join(output_path, "feature_matching.jpg"),
         np.hstack((feat1, feat2)),
     )
 
