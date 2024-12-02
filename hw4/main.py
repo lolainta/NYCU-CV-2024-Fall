@@ -21,12 +21,10 @@ def decompose_essential_matrix(E):
     """
     # Singular value decomposition
     U, S, Vt = np.linalg.svd(E)
-
     m = (S[0] + S[1]) / 2
     E = U @ np.diag([m, m, 0]) @ Vt
-
     W = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
-
+    U, S, Vt = np.linalg.svd(E)
     R1 = U @ W @ Vt
     R2 = U @ W.T @ Vt
     t = U[:, 2]

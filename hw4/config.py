@@ -1,6 +1,6 @@
 import numpy as np
 
-CASE = 2
+CASE = 1
 OUTPUT_PATH = "output"
 Point = tuple[int, int]
 
