@@ -47,7 +47,7 @@ def decompose_essential_matrix(E):
     return R1, R2, t
 
 
-def triangulate_3d_points(K, p1, p2, pts1, pts2):
+def triangulate_3d_points(K, R, t, pts1, pts2):
     """
     Triangulates 3D points from two views given projection matrices and corresponding points.
 
@@ -60,6 +60,10 @@ def triangulate_3d_points(K, p1, p2, pts1, pts2):
     Returns:
     - points_3d: Nx3 array of triangulated 3D points (inhomogeneous coordinates).
     """
+
+    p1 = K[0] @ np.hstack((np.eye(3), np.zeros((3, 1))))
+    p2 = K[1] @ np.hstack((R, t.reshape(-1, 1)))
+
     points_3d = []
     for i in range(len(pts1)):
         A = np.array(
@@ -73,11 +77,15 @@ def triangulate_3d_points(K, p1, p2, pts1, pts2):
         _, _, Vt = np.linalg.svd(A)
         point = Vt[-1, :3] / Vt[-1, 3]
         points_3d.append(point)
-    return np.array(points_3d)
+
+    neg = np.count_nonzero(np.array(points_3d)[:, 2] < 0)
+
+    return np.array(points_3d), neg
 
 
 def main(case: int):
     IMG_PATH, K, OUTPUT_PATH = load(case)
+    os.makedirs(OUTPUT_PATH, exist_ok=True)
     print(f"Running images: {IMG_PATH}")
     print(f"Output path: {OUTPUT_PATH}")
 
@@ -91,15 +99,8 @@ def main(case: int):
     ic(len(matches))
     assert len(matches[0]) == 2
 
-    # F = ransac(matches)
-    F, mask = cv2.findFundamentalMat(
-        np.array([m[0] for m in matches]),
-        np.array([m[1] for m in matches]),
-        cv2.FM_RANSAC,
-    )
-
+    F = ransac(matches, threshold=1, max_iterations=800)
     ic(F)
-
     # Draw epipolar lines
     img1_line, img1_point, img2_line, img2_point = draw_epipolar_lines(
         img1, img2, np.array(matches)[:, 0], np.array(matches)[:, 1], F
@@ -115,24 +116,25 @@ def main(case: int):
 
     R1_s, R2_s, t_s = decompose_essential_matrix(E)
 
-    point3d = []
+    point3d = np.array([])
     negtive = float("inf")
-    ic(R1_s, R2_s, t_s)
-    for R, t in [(R1_s, t_s), (R2_s, t_s), (R1_s, -t_s), (R2_s, -t_s)]:  # 4 cases
-        P1 = K[0] @ np.hstack((np.eye(3), np.zeros((3, 1))))
-        P2 = K[1] @ np.hstack((R, t.reshape(-1, 1)))
+    R_final, t_final = np.array([]), np.array([])
 
-        cur = triangulate_3d_points(
-            K, P1, P2, np.array(matches)[:, 0], np.array(matches)[:, 1]
+    ic(R1_s, R2_s, t_s)
+    for R, t in [(R1_s, t_s), (R2_s, t_s), (R1_s, -t_s), (R2_s, -t_s)]:
+        cur, cur_neg = triangulate_3d_points(
+            K, R, t, np.array(matches)[:, 0], np.array(matches)[:, 1]
         )
 
-        cur_neg = np.count_nonzero(cur[:, 2] < 0)
         ic(R, t, cur_neg)
         if cur_neg < negtive:
-            point3d = cur
-            negtive = cur_neg
+            point3d, negtive = cur, cur_neg
+            R_final, t_final = R, t
 
-    ic(len(point3d), point3d)
+    ic(negtive, len(point3d), point3d)
+
+    P1 = K[0] @ np.hstack((np.eye(3), np.zeros((3, 1))))
+    P2 = K[1] @ np.hstack((R_final, t_final.reshape(-1, 1)))
 
     # Save the triangulated points
     mesh = trimesh.Trimesh(vertices=point3d)
@@ -145,6 +147,5 @@ def main(case: int):
 
 
 if __name__ == "__main__":
-    os.makedirs("output", exist_ok=True)
     main(1)
     main(2)

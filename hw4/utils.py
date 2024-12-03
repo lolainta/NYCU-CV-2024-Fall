@@ -37,41 +37,60 @@ def feature_matching(img1, img2, ratio=0.75, output_path="output"):
     return pair_points
 
 
-def compute_homography(pts_src, pts_dst):
+def normalize_points(points):
+    centroid = np.mean(points, axis=0)
+    centered_points = points - centroid
+    scale = np.sqrt(2) / np.mean(np.sqrt(np.sum(centered_points**2, axis=1)))
+
+    T = np.array(
+        [[scale, 0, -scale * centroid[0]], [0, scale, -scale * centroid[1]], [0, 0, 1]]
+    )
+
+    normalized_points = (T @ np.column_stack((points, np.ones(len(points)))).T).T
+    return normalized_points[:, :2], T
+
+
+def compute_fundamental_matrix(pts_src, pts_dst):
+    pts_src_norm, T1 = normalize_points(pts_src)
+    pts_dst_norm, T2 = normalize_points(pts_dst)
+
     A = []
-    for i in range(len(pts_src)):
-        x, y = pts_src[i]
-        u, v = pts_dst[i]
-        A.append([-x, -y, -1, 0, 0, 0, u * x, u * y, u])
-        A.append([0, 0, 0, -x, -y, -1, v * x, v * y, v])
+    for (x1, y1), (x2, y2) in zip(pts_src_norm, pts_dst_norm):
+        A.append([x2 * x1, x2 * y1, x2, y2 * x1, y2 * y1, y2, x1, y1, 1])
     A = np.array(A)
-    assert A.shape == (len(pts_src) * 2, 9)
-    U, S, V = np.linalg.svd(A)
-    H = V[-1].reshape(3, 3)
-    return H / H[2, 2]
+
+    U, S, Vt = np.linalg.svd(A)
+    F = Vt[-1].reshape(3, 3)
+    # print(U.shape, S.shape, Vt.shape, F.shape)
+    U, S, Vt = np.linalg.svd(F)
+    S[-1] = 0
+    F = U @ np.diag(S) @ Vt
+
+    F = T2.T @ F @ T1
+
+    return F / F[2, 2]
 
 
-def ransac(matches_pos, threshold=5.0, max_iterations=1000):
+def ransac(matches_pos, threshold=5, max_iterations=1000):
     max_inliers = 0
-    best_H = None
+    best_F = None
     for _ in trange(max_iterations):
         sample_indices = random.sample(range(len(matches_pos)), 8)
         src_sample = np.array([matches_pos[i][1] for i in sample_indices])
         dst_sample = np.array([matches_pos[i][0] for i in sample_indices])
 
-        H = compute_homography(src_sample, dst_sample)
-        inlier_count = 0
+        F = compute_fundamental_matrix(src_sample, dst_sample)
 
+        inlier_count = 0
         for match in matches_pos:
             src_point = np.array([*match[1], 1])
-            projected_point = H @ src_point
-            projected_point /= projected_point[2]
-            dst_point = np.array([*match[0]])
-            if np.linalg.norm(projected_point[:2] - dst_point) < threshold:
+            dst_point = np.array([*match[0], 1])
+            line = F @ src_point
+            distance = np.abs(dst_point @ line) / np.sqrt(line[0] ** 2 + line[1] ** 2)
+            if distance < threshold:
                 inlier_count += 1
         if inlier_count > max_inliers:
             max_inliers = inlier_count
-            best_H = H
-
+            best_F = F
     print("Number of inliers:", max_inliers)
-    return best_H
+    return best_F
