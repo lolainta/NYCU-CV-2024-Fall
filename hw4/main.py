@@ -7,11 +7,9 @@ from icecream import ic
 
 from config import load
 from utils import feature_matching, ransac
-from draw import draw_epipolar_lines, visulize_3d_points
+from draw import draw_epipolar_lines, visulize_3d_points, plot_3d_points
 
 THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING = 42
-
-Point = tuple[int, int]
 
 random.seed(THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING)
 np.random.seed(THE_ANSWER_TO_LIFE_THE_UNIVERSE_AND_EVERYTHING)
@@ -93,9 +91,13 @@ def main(case: int):
     img2 = cv2.imread(IMG_PATH[1], cv2.IMREAD_COLOR)
 
     m1 = np.hstack((img1, img2))
-    cv2.imwrite(os.path.join(OUTPUT_PATH, "original_image.jpg"), m1)
+    cv2.imwrite(os.path.join(OUTPUT_PATH, "img_pair.jpg"), m1)
 
-    matches: list[list[Point]] = feature_matching(img1, img2, 0.75, OUTPUT_PATH)
+    feat1, feat2, matches = feature_matching(img1, img2, 0.75)
+    cv2.imwrite(
+        os.path.join(OUTPUT_PATH, "feature_matching.jpg"),
+        np.hstack((feat1, feat2)),
+    )
     ic(len(matches))
     assert len(matches[0]) == 2
 
@@ -126,7 +128,7 @@ def main(case: int):
             K, R, t, np.array(matches)[:, 0], np.array(matches)[:, 1]
         )
 
-        ic(R, t, cur_neg)
+        # ic(R, t, cur_neg)
         if cur_neg < negtive:
             point3d, negtive = cur, cur_neg
             R_final, t_final = R, t
@@ -138,12 +140,13 @@ def main(case: int):
 
     # Save the triangulated points
     mesh = trimesh.Trimesh(vertices=point3d)
-    mesh.export(os.path.join(OUTPUT_PATH, "output_model.obj"))
+    mesh.export(os.path.join(OUTPUT_PATH, "model.obj"))
 
-    img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2, OUTPUT_PATH)
-    cv2.imwrite(
-        os.path.join(OUTPUT_PATH, "3d_points.jpg"), np.hstack((img1_pts, img2_pts))
-    )
+    # img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2)
+    # cv2.imwrite(
+    #     os.path.join(OUTPUT_PATH, "3d_points.jpg"), np.hstack((img1_pts, img2_pts))
+    # )
+    plot_3d_points(point3d, os.path.join(OUTPUT_PATH, "mesh.jpg"))
 
 
 if __name__ == "__main__":

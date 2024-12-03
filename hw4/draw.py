@@ -1,5 +1,6 @@
 import cv2
 import os
+import numpy as np
 
 from random import randint, seed
 from matplotlib import pyplot as plt
@@ -72,7 +73,7 @@ def draw_epipolar_lines(img1, img2, points1, points2, F):
     return img1_line, img1_point, img2_line, img2_point
 
 
-def visulize_3d_points(points_3d, img1, img2, P1, P2, output_path=None):
+def visulize_3d_points(points_3d, img1, img2, P1, P2):
     """
     Visualize 3D points in two views given projection matrices and corresponding points.
 
@@ -85,8 +86,12 @@ def visulize_3d_points(points_3d, img1, img2, P1, P2, output_path=None):
     - img1_points, img2_points: Images with 3D points visualized.
     """
     # Project 3D points to the two views
-    points1 = cv2.perspectiveTransform(points_3d[:, None], P1).reshape(-1, 2)
-    points2 = cv2.perspectiveTransform(points_3d[:, None], P2).reshape(-1, 2)
+    points1 = (P1 @ np.column_stack((points_3d, np.ones(len(points_3d)))).T).T
+    points2 = (P2 @ np.column_stack((points_3d, np.ones(len(points_3d)))).T).T
+    points1 = points1[:, :2] / points1[:, 2].reshape(-1, 1)
+    points2 = points2[:, :2] / points2[:, 2].reshape(-1, 1)
+    # points1 = cv2.perspectiveTransform(points_3d.reshape(-1, 1, 3), P1).reshape(-1, 2)
+    # points2 = cv2.perspectiveTransform(points_3d.reshape(-1, 1, 3), P2).reshape(-1, 2)
 
     # Draw points on the images
     img1_points = img1.copy()
@@ -96,11 +101,10 @@ def visulize_3d_points(points_3d, img1, img2, P1, P2, output_path=None):
         cv2.circle(img1_points, tuple(map(int, point1)), 5, (0, 255, 0), -1)
         cv2.circle(img2_points, tuple(map(int, point2)), 5, (0, 255, 0), -1)
 
-    plot_3d_points(points_3d, output_path)
     return img1_points, img2_points
 
 
-def plot_3d_points(points_3d, output_path=None):
+def plot_3d_points(points_3d, filename):
     # Plot 3D points
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -116,5 +120,4 @@ def plot_3d_points(points_3d, output_path=None):
     # set camera position
     ax.view_init(elev=-95, azim=-90)  # type: ignore
     # plt.show()
-    if output_path is not None:
-        plt.savefig(os.path.join(output_path, "mesh.jpg"))
+    plt.savefig(filename)
