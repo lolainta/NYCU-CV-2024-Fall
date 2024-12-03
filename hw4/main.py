@@ -99,7 +99,7 @@ def main(case: int):
     ic(len(matches))
     assert len(matches[0]) == 2
 
-    F = ransac(matches, threshold=1, max_iterations=800)
+    F = ransac(matches, threshold=5, max_iterations=800)
     ic(F)
     # Draw epipolar lines
     img1_line, img1_point, img2_line, img2_point = draw_epipolar_lines(

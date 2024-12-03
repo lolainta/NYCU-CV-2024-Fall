@@ -71,7 +71,7 @@ def compute_fundamental_matrix(pts_src, pts_dst):
     return F / F[2, 2]
 
 
-def ransac(matches_pos, threshold=5, max_iterations=1000):
+def ransac(matches_pos, threshold: float = 5, max_iterations=1000):
     max_inliers = 0
     best_F = None
     for _ in trange(max_iterations):
