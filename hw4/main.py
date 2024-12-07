@@ -142,13 +142,14 @@ def main(case: int):
     mesh = trimesh.Trimesh(vertices=point3d)
     mesh.export(os.path.join(OUTPUT_PATH, "model.obj"))
 
-    # img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2)
-    # cv2.imwrite(
-    #     os.path.join(OUTPUT_PATH, "3d_points.jpg"), np.hstack((img1_pts, img2_pts))
-    # )
+    img1_pts, img2_pts = visulize_3d_points(point3d, img1, img2, P1, P2)
+    cv2.imwrite(
+        os.path.join(OUTPUT_PATH, "3d_points.jpg"), np.hstack((img1_pts, img2_pts))
+    )
     plot_3d_points(point3d, os.path.join(OUTPUT_PATH, "mesh.jpg"))
 
 
 if __name__ == "__main__":
     main(1)
     main(2)
+    main(3)
