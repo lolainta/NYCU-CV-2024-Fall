@@ -3,8 +3,8 @@ import numpy as np
 import os
 from tqdm import trange, tqdm
 import time
-
 from icecream import ic
+from jax import numpy as jnp
 
 from camera_calibration_show_extrinsics import plot_extrinsics
 
@@ -13,7 +13,8 @@ ic.configureOutput(includeContext=True)
 # ic.disable()
 
 CASE = "room"
-# CASE = "park"
+CASE = "park"
+# CASE = "park-2"
 
 DATA_DIR = "data"
 IMAGE_DIR = os.path.join(DATA_DIR, "images")
@@ -22,6 +23,7 @@ META_DIR = os.path.join(DATA_DIR, CASE)
 
 OUTPUT_DIR = os.path.join("output", CASE)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 def warp(i, imgs, H):
     img_l, img_r = imgs
@@ -215,7 +217,8 @@ def test1(images, intrinsic, extrinsics):
 
     cv2.imwrite(f"{out_dir}/panorama.jpg", pano)
 
-def test2(images, checkboard_corners):
+
+def align_checkboard(images, checkboard_corners):
 
     PANO_WIDTH = 8000
     PANO_HEIGHT = 4000
@@ -223,7 +226,6 @@ def test2(images, checkboard_corners):
     MAX_WIDTH = PANO_WIDTH // 2 + 100
     MIN_HEIGHT = PANO_HEIGHT // 2 - 100
     MAX_HEIGHT = PANO_HEIGHT // 2 + 100
-
 
     fixed_cords = [
         [MIN_WIDTH, MIN_HEIGHT],
@@ -238,44 +240,39 @@ def test2(images, checkboard_corners):
         fixed_cords = fixed_cords[3], fixed_cords[2], fixed_cords[1], fixed_cords[0]
     else:
         raise ValueError("Invalid CASE")
-    pano = np.zeros((PANO_HEIGHT, PANO_WIDTH, 3, len(images)), dtype=np.uint8)
 
+    # add static args
     def align(img_name, image, corner, fixed_cords):
         # ic(img_name)
         M = cv2.getPerspectiveTransform(
             np.array(corner, dtype=np.float32),
             np.array(fixed_cords, dtype=np.float32),
         )
+
         # ic(M)
         ret = cv2.warpPerspective(image, M, (PANO_WIDTH, PANO_HEIGHT))
         # ic(ret.shape)
         cv2.imwrite(f"{OUTPUT_DIR}/{img_name}", ret)
         return ret
 
-
     for i, ((img_name, image), corner) in enumerate(zip(images, checkboard_corners)):
         ic(img_name)
         align(img_name, image, corner, fixed_cords)
+
+    pano = jnp.zeros((PANO_HEIGHT, PANO_WIDTH, 3, len(images)), dtype=np.uint8)
     for i, (img_name, _) in tqdm([*enumerate(images)]):
         img = cv2.imread(f"{OUTPUT_DIR}/{img_name}")
-        pano[:, :, :, i] = img
-    
+        pano = pano.at[..., i].set(img)
+
     print("Merging images...")
-    panorama = np.true_divide(pano.sum(axis=-1), (pano != 0).sum(axis=-1))
+    panorama = jnp.true_divide(pano.sum(axis=-1), (pano != 0).sum(axis=-1))
+    panorama = np.array(panorama)
     cv2.imwrite(f"{OUTPUT_DIR}/panorama.jpg", panorama)
+
     print(f"Panorama saved to {OUTPUT_DIR}/panorama.jpg")
 
-    # for i, ((img_name, image), corner) in enumerate(zip(images, checkboard_corners)):
-    #     warp_img = align(img_name, image, corner, fixed_cords)
-    #     cv2.imwrite(f"{OUTPUT_DIR}/warp{i}.jpg", warp_img)
-    #     pano[:, :, :, i] = warp_img
-    #     ic(f"{OUTPUT_DIR}/{i}.jpg")
 
-    # pano = np.true_divide(pano.sum(axis=-1), (pano != 0).sum(axis=-1))
-    # cv2.imwrite(f"{OUTPUT_DIR}/panorama.jpg", pano)
-
-
-def main():
+def test_main():
     # INTRISIC_PATH = os.path.join(META_DIR, "intrinsic.txt")
     # intrinsic = np.array(
     #     [line.split() for line in open(INTRISIC_PATH).readlines()], dtype=np.float32
@@ -302,8 +299,10 @@ def main():
     # plot_extrinsics(intrinsic, extrinsics)
     # warp_img = warp(images, intrinsic, extrinsics)
     # test1(images, intrinsic, extrinsics)
+    pass
 
 
+def main():
     IMGPOINTS_PATH = os.path.join(META_DIR, "imgpoints.txt")
     checkboard_pair = [
         (line.split()[0], np.array(line.split()[1:], dtype=np.float32))
@@ -319,7 +318,7 @@ def main():
     )
     ic(checkboard_corners)
     time.sleep(1)
-    test2(images, checkboard_corners)
+    align_checkboard(images, checkboard_corners)
 
 
 if __name__ == "__main__":
