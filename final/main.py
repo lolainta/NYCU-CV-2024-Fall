@@ -14,7 +14,7 @@ ic.configureOutput(includeContext=True)
 
 CASE = "room"
 CASE = "park"
-# CASE = "park-2"
+CASE = "park-2"
 
 DATA_DIR = "data"
 IMAGE_DIR = os.path.join(DATA_DIR, "images")
@@ -238,6 +238,8 @@ def align_checkboard(images, checkboard_corners):
         fixed_cords = fixed_cords[0], fixed_cords[2], fixed_cords[1], fixed_cords[3]
     elif CASE == "park":
         fixed_cords = fixed_cords[3], fixed_cords[2], fixed_cords[1], fixed_cords[0]
+    elif CASE == "park-2":
+        fixed_cords = fixed_cords[0], fixed_cords[2], fixed_cords[1], fixed_cords[3]
     else:
         raise ValueError("Invalid CASE")
 
@@ -316,8 +318,8 @@ def main():
     checkboard_corners = np.array(
         [np.array(pts).reshape(-1, 2) for _, pts in checkboard_pair]
     )
-    ic(checkboard_corners)
-    time.sleep(1)
+    # ic(checkboard_corners)
+    print("Case:", CASE)
     align_checkboard(images, checkboard_corners)
 
 
